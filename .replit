@@ -1,0 +1,16 @@
+run = "bash scripts/run-replit.sh"
+modules = ["python-3.11"]
+hidden = [".config", "venv", ".venv", "__pycache__", "*.pyc"]
+
+[nix]
+channel = "stable-24_05"
+packages = ["ffmpeg", "deno"]
+
+[env]
+PYTHONPATH = "src"
+ISMP3_CONFIG = "data/config.toml"
+PYTHONUNBUFFERED = "1"
+
+[[ports]]
+localPort = 8787
+externalPort = 80

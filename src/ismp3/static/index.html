@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b1220">
+  <meta name="description" content="ismp3 — حوّل أي رابط أو ملف صوت/فيديو إلى MP3 بأقل حجم. واجهة عربية، خفيفة، تعمل على Termux وReplit.">
+  <title>ismp3 — أي وسائط إلى MP3</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<a class="skip" href="#addCard">تخطَّ إلى نموذج الإضافة</a>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="logo" aria-hidden="true">♪</div>
+    <div class="brand-text">
+      <h1>ismp3</h1>
+      <p>أي رابط أو ملف ← MP3 بأقل حجم</p>
+    </div>
+  </div>
+  <div class="topbar-actions">
+    <span class="pill" id="healthPill" title="حالة الخادم">
+      <span class="dot" id="healthDot"></span>
+      <span id="healthText">جارٍ الاتصال…</span>
+    </span>
+    <button class="icon-btn" id="themeBtn" title="تبديل السمة" aria-label="تبديل السمة">🌙</button>
+    <button class="icon-btn" id="settingsBtn" title="الإعدادات" aria-label="الإعدادات">⚙️</button>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section class="stats" aria-label="إحصاءات">
+    <article class="stat"><span class="stat-icon">📚</span><div><b id="statTotal">0</b><small>إجمالي المهام</small></div></article>
+    <article class="stat"><span class="stat-icon">✅</span><div><b id="statDone">0</b><small>مكتملة</small></div></article>
+    <article class="stat"><span class="stat-icon">⏳</span><div><b id="statActive">0</b><small>نشطة</small></div></article>
+    <article class="stat"><span class="stat-icon">🎵</span><div><b id="statSize">0</b><small>حجم النتائج</small></div></article>
+    <article class="stat"><span class="stat-icon">💾</span><div><b id="statFree">—</b><small>مساحة حرة</small></div></article>
+    <article class="stat"><span class="stat-icon">🧠</span><div><b id="statSeen">0</b><small>في السجل</small></div></article>
+  </section>
+
+  <section class="card add-card" id="addCard">
+    <div class="card-head">
+      <div>
+        <h2>إضافة جديدة</h2>
+        <p class="muted small">الصق رابطاً أو أكثر، أو ارفع ملفات، أو اختر من مساحة الهاتف.</p>
+      </div>
+      <div class="tabs" role="tablist" aria-label="طريقة الإضافة">
+        <button class="tab active" data-tab="links" role="tab">🔗 روابط</button>
+        <button class="tab" data-tab="files" role="tab">⬆️ رفع</button>
+        <button class="tab" data-tab="server" role="tab">📁 من الجهاز</button>
+      </div>
+    </div>
+
+    <div class="tab-panel" data-panel="links">
+      <label class="field">
+        <span>الروابط أو المسارات <small>سطر واحد لكل عنصر</small></span>
+        <textarea id="sources" rows="4" spellcheck="false"
+          placeholder="https://www.youtube.com/watch?v=…&#10;https://soundcloud.com/…&#10;https://archive.org/details/…&#10;/sdcard/Music/ألبوم"></textarea>
+      </label>
+    </div>
+
+    <div class="tab-panel hidden" data-panel="files">
+      <div class="dropzone" id="dropzone">
+        <div class="drop-icon" aria-hidden="true">🎧</div>
+        <p>اسحب ملفات صوت/فيديو أو أرشيف ZIP هنا</p>
+        <p class="muted small">أو <button type="button" class="link" id="pickFilesBtn">اختر من جهازك</button> — يُرفع إلى الخادم ثم يُضاف للمهمة.</p>
+        <input type="file" id="fileInput" multiple hidden>
+        <div class="upload-status small" id="uploadStatus"></div>
+      </div>
+    </div>
+
+    <div class="tab-panel hidden" data-panel="server">
+      <div class="server-pick">
+        <button type="button" class="btn" id="browseBtn">📂 تصفّح مجلدات الخادم</button>
+        <p class="muted small">اختر ملفاً أو مجلداً من مساحة الهاتف (Termux) أو الخادم (Replit).</p>
+      </div>
+    </div>
+
+    <details class="advanced" id="advanced">
+      <summary>خيارات متقدمة <span class="muted small">— الجودة، القائمة، الغلاف…</span></summary>
+      <div class="grid">
+        <label class="field">
+          <span>البتريت</span>
+          <select id="bitrate">
+            <optgroup label="الأصغر حجماً">
+              <option value="8">8 kbps</option>
+              <option value="16">16 kbps</option>
+              <option value="24" selected>24 kbps (افتراضي)</option>
+              <option value="32">32 kbps</option>
+            </optgroup>
+            <optgroup label="متوازن">
+              <option value="40">40 kbps</option>
+              <option value="48">48 kbps</option>
+              <option value="56">56 kbps</option>
+              <option value="64">64 kbps</option>
+              <option value="80">80 kbps</option>
+              <option value="96">96 kbps</option>
+            </optgroup>
+            <optgroup label="جودة أعلى">
+              <option value="112">112 kbps</option>
+              <option value="128">128 kbps</option>
+              <option value="160">160 kbps</option>
+              <option value="192">192 kbps</option>
+              <option value="224">224 kbps</option>
+              <option value="256">256 kbps</option>
+              <option value="320">320 kbps</option>
+            </optgroup>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>نوع البتريت</span>
+          <select id="mode">
+            <option value="cbr" selected>CBR — ثابت (موصى به)</option>
+            <option value="abr">ABR — متوسط</option>
+            <option value="vbr">VBR — متغيّر</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>التردد</span>
+          <select id="sampleRate">
+            <option value="0" selected>تلقائي حسب البتريت</option>
+            <option value="8000">8000 Hz</option>
+            <option value="11025">11025 Hz</option>
+            <option value="12000">12000 Hz</option>
+            <option value="16000">16000 Hz</option>
+            <option value="22050">22050 Hz</option>
+            <option value="24000">24000 Hz</option>
+            <option value="32000">32000 Hz</option>
+            <option value="44100">44100 Hz</option>
+            <option value="48000">48000 Hz</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>القنوات</span>
+          <select id="channels">
+            <option value="1" selected>مونو — أصغر</option>
+            <option value="2">ستيريو</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>ترتيب المجلدات</span>
+          <select id="layout">
+            <option value="flat" selected>مسطّح</option>
+            <option value="artist">فنان</option>
+            <option value="album">فنان / ألبوم</option>
+            <option value="playlist">قائمة تشغيل</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>اختيار من القائمة</span>
+          <input id="pick" type="text" placeholder="مثال: 1,3,5-9 — فارغ = الكل" inputmode="numeric">
+        </label>
+
+        <label class="field">
+          <span>السرعة</span>
+          <select id="speed">
+            <option value="0.75">0.75×</option>
+            <option value="1" selected>1× عادي</option>
+            <option value="1.25">1.25×</option>
+            <option value="1.5">1.5×</option>
+            <option value="2">2×</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>عميل YouTube</span>
+          <select id="client">
+            <option value="auto" selected>تلقائي</option>
+            <option value="android">android</option>
+            <option value="ios">ios</option>
+            <option value="tv">tv</option>
+            <option value="web">web</option>
+            <option value="mweb">mweb</option>
+            <option value="direct">direct</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="checks">
+        <label class="check"><input type="checkbox" id="playlist" checked> اسمح بقوائم التشغيل</label>
+        <label class="check"><input type="checkbox" id="cover"> تضمين غلاف مصغّر</label>
+        <label class="check"><input type="checkbox" id="bundle"> اجمع النتائج في ZIP</label>
+        <label class="check"><input type="checkbox" id="force"> تجاهل سجل التنزيل السابق</label>
+      </div>
+    </details>
+
+    <div class="add-actions">
+      <div class="presets" role="group" aria-label="إعدادات جاهزة">
+        <button type="button" class="chip preset" data-preset="tiny" title="16k · 16kHz · مونو">أصغر</button>
+        <button type="button" class="chip preset active" data-preset="voice" title="24k · 24kHz · مونو">صوت</button>
+        <button type="button" class="chip preset" data-preset="music" title="64k · 44.1kHz · ستيريو">موسيقى</button>
+        <button type="button" class="chip preset" data-preset="hq" title="128k · 44.1kHz · ستيريو">جودة عالية</button>
+      </div>
+      <button type="button" class="btn primary big" id="addBtn">🎧 حوّل الآن</button>
+    </div>
+    <p class="muted small" id="addHint">24 kbps · مونو · 24 kHz — حوالي 10.8 MB لكل ساعة.</p>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <div>
+        <h2>المهام</h2>
+        <p class="muted small">تحديث فوري عبر SSE، مع إمكانية الإلغاء وإعادة المحاولة والتنزيل.</p>
+      </div>
+      <div class="filters" role="group" aria-label="تصفية المهام">
+        <button class="chip active" data-filter="">الكل</button>
+        <button class="chip" data-filter="active">نشطة</button>
+        <button class="chip" data-filter="done">تم</button>
+        <button class="chip" data-filter="error">أخطاء</button>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <input id="search" class="search" type="search" placeholder="🔎 ابحث بالعنوان أو الرابط…">
+      <button class="btn ghost" id="refreshBtn">🔄 تحديث</button>
+      <button class="btn ghost danger" id="clearBtn">🧹 حذف المنتهية</button>
+    </div>
+
+    <div id="jobs" class="jobs" aria-live="polite"></div>
+    <p class="empty hidden" id="jobsEmpty">لا توجد مهام بعد — ابدأ بإضافة رابط أو ملف من الأعلى.</p>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <div>
+        <h2>المكتبة</h2>
+        <p class="muted small">ملفات MP3 في مجلد المخرجات <span id="libraryDir" class="mono"></span></p>
+      </div>
+      <button class="btn ghost" id="libraryRefresh">🔄 تحديث</button>
+    </div>
+    <div id="library" class="filelist"></div>
+    <p class="empty hidden" id="libraryEmpty">لا توجد ملفات MP3 في مجلد المخرجات بعد.</p>
+  </section>
+
+  <footer class="footer">
+    <span>ismp3 <span id="versionText"></span> — صُنع للاستخدام الشخصي.</span>
+    <span class="muted">yt-dlp + ffmpeg · واجهة عربية · Termux / Replit</span>
+  </footer>
+</main>
+
+<!-- ═══ الإعدادات ═══ -->
+<dialog id="settingsDialog" class="dialog">
+  <form method="dialog" class="dialog-head">
+    <h2>⚙️ الإعدادات</h2>
+    <button class="icon-btn" value="close" aria-label="إغلاق">✕</button>
+  </form>
+
+  <div class="dialog-body">
+    <section class="settings-section">
+      <h3>عام</h3>
+      <div class="grid">
+        <label class="field">
+          <span>مجلد المخرجات</span>
+          <div class="row">
+            <input id="setOutput" type="text" dir="ltr" spellcheck="false">
+            <button type="button" class="btn ghost" id="setOutputBrowse">📂</button>
+          </div>
+        </label>
+        <label class="field">
+          <span>البتريت الافتراضي</span>
+          <select id="setBitrate">
+            <option value="8">8</option><option value="16">16</option><option value="24">24</option>
+            <option value="32">32</option><option value="40">40</option><option value="48">48</option>
+            <option value="56">56</option><option value="64">64</option><option value="80">80</option>
+            <option value="96">96</option><option value="112">112</option><option value="128">128</option>
+            <option value="160">160</option><option value="192">192</option>
+            <option value="224">224</option><option value="256">256</option><option value="320">320</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>نوع البتريت</span>
+          <select id="setMode">
+            <option value="cbr">CBR</option><option value="abr">ABR</option><option value="vbr">VBR</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>القنوات</span>
+          <select id="setChannels"><option value="1">مونو</option><option value="2">ستيريو</option></select>
+        </label>
+        <label class="field">
+          <span>ترتيب المجلدات</span>
+          <select id="setLayout">
+            <option value="flat">مسطّح</option><option value="artist">فنان</option>
+            <option value="album">فنان / ألبوم</option><option value="playlist">قائمة</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>عدد العمال (1–8)</span>
+          <input id="setJobs" type="number" min="1" max="8" step="1">
+        </label>
+        <label class="field">
+          <span>التردد</span>
+          <select id="setSample">
+            <option value="0">تلقائي</option><option value="16000">16000</option>
+            <option value="22050">22050</option><option value="24000">24000</option>
+            <option value="32000">32000</option><option value="44100">44100</option>
+            <option value="48000">48000</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>رمز الدخول <small>فارغ = بلا حماية</small></span>
+          <input id="setToken" type="text" dir="ltr" spellcheck="false" placeholder="token">
+        </label>
+      </div>
+      <div class="checks">
+        <label class="check"><input type="checkbox" id="setCover"> غلاف</label>
+        <label class="check"><input type="checkbox" id="setPlaylist"> قوائم التشغيل</label>
+      </div>
+    </section>
+
+    <section class="settings-section">
+      <h3>🍪 كوكيز YouTube</h3>
+      <p class="muted small">ضرورية عندما يطلب YouTube تسجيل الدخول (خصوصاً على Replit). الصق محتوى <span class="mono">cookies.txt</span> بصيغة Netscape.</p>
+      <div class="row between">
+        <span class="small" id="cookiesStatus">—</span>
+        <button type="button" class="btn ghost danger" id="cookiesDelete">حذف</button>
+      </div>
+      <textarea id="setCookiesText" rows="4" dir="ltr" spellcheck="false" placeholder="# Netscape HTTP Cookie File&#10;.youtube.com	TRUE	/	TRUE	…"></textarea>
+      <button type="button" class="btn" id="cookiesSave">💾 حفظ الكوكيز</button>
+    </section>
+
+    <section class="settings-section">
+      <h3>🏛️ Archive.org</h3>
+      <p class="muted small">ارفع النتائج كعنصر عام. احصل على المفاتيح من <span class="mono">archive.org/account/s3.php</span>.</p>
+      <div class="grid">
+        <label class="field"><span>Access Key</span><input id="setIaAccess" type="text" dir="ltr" spellcheck="false" autocomplete="off"></label>
+        <label class="field"><span>Secret Key</span><input id="setIaSecret" type="password" dir="ltr" spellcheck="false" autocomplete="off"></label>
+      </div>
+      <div class="row between">
+        <span class="small" id="iaStatus">—</span>
+        <div class="row">
+          <button type="button" class="btn" id="iaSave">💾 حفظ</button>
+          <button type="button" class="btn ghost danger" id="iaDelete">حذف</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="settings-section">
+      <h3>ℹ️ معلومات</h3>
+      <p class="small muted" id="settingsInfo"></p>
+    </section>
+  </div>
+
+  <div class="dialog-foot">
+    <button type="button" class="btn primary" id="settingsSave">💾 حفظ الإعدادات</button>
+    <button type="button" class="btn ghost" id="settingsClose">إغلاق</button>
+  </div>
+</dialog>
+
+<!-- ═══ تصفّح الخادم ═══ -->
+<dialog id="browseDialog" class="dialog">
+  <form method="dialog" class="dialog-head">
+    <h2>📂 تصفّح</h2>
+    <button class="icon-btn" value="close" aria-label="إغلاق">✕</button>
+  </form>
+  <div class="dialog-body">
+    <div class="row">
+      <button type="button" class="btn ghost" id="browseUp">⬆️ أعلى</button>
+      <input id="browsePath" type="text" dir="ltr" spellcheck="false" class="search">
+      <button type="button" class="btn ghost" id="browseGo">اذهب</button>
+    </div>
+    <div id="browseList" class="browse-list"></div>
+  </div>
+  <div class="dialog-foot">
+    <button type="button" class="btn primary" id="browseUseDir">✅ استخدام هذا المجلد</button>
+    <button type="button" class="btn ghost" id="browseClose">إغلاق</button>
+  </div>
+</dialog>
+
+<!-- ═══ رمز الدخول ═══ -->
+<dialog id="tokenDialog" class="dialog small-dialog">
+  <form method="dialog" class="dialog-head">
+    <h2>🔐 رمز الدخول</h2>
+    <button class="icon-btn" value="close" aria-label="إغلاق">✕</button>
+  </form>
+  <div class="dialog-body">
+    <p class="small">هذا الخادم محمي. الصق الرمز الذي ظهر في الطرفية عند التشغيل.</p>
+    <input id="tokenInput" type="text" dir="ltr" spellcheck="false" placeholder="token" class="search">
+  </div>
+  <div class="dialog-foot">
+    <button type="button" class="btn primary" id="tokenSave">دخول</button>
+  </div>
+</dialog>
+
+<div id="toasts" class="toasts" aria-live="assertive"></div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

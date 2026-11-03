@@ -1,0 +1,9 @@
+# Core dependencies (Termux / Replit / any Linux)
+yt-dlp>=2025.1.1
+
+# Optional: Internet Archive upload (remove if you do not need it)
+internetarchive>=4.0
+
+# Optional for local development:
+# pytest>=8
+# ruff>=0.5

@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+.pytest_cache/
+
+# ismp3 runtime data
+data/
+.ismp3/
+*.log
+nohup.out
+
+# secrets (never commit)
+cookies.txt
+ia.json
+*.cookie
+*.cookies
+.env
+.env.*
+
+# media / outputs
+*.mp3
+*.m4a
+*.opus
+*.wav
+*.flac
+*.mp4
+*.mkv
+*.webm
+*.zip
+
+# editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp

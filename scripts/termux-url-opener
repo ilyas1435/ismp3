@@ -1,0 +1,39 @@
+#!/data/data/com.termux/files/usr/bin/bash
+# Termux share-target: copy to ~/.termux/termux-url-opener and chmod +x.
+# https://github.com/ilyas1435/ismp3
+
+set -uo pipefail
+
+URL="${1:-}"
+if [ -z "$URL" ]; then
+  exit 0
+fi
+
+VENV="${ISMP3_VENV:-$HOME/.venvs/ismp3}"
+LOG="$HOME/.ismp3-share.log"
+
+if command -v termux-toast >/dev/null 2>&1; then
+  termux-toast "ismp3: جارٍ التحويل…"
+fi
+
+if [ -x "$VENV/bin/ismp3" ]; then
+  ISM="$VENV/bin/ismp3"
+else
+  ISM="ismp3"
+fi
+
+printf '\n===== %s =====\n%s\n' "$(date)" "$URL" >>"$LOG"
+"$ISM" add "$URL" >>"$LOG" 2>&1
+STATUS=$?
+
+if command -v termux-notification >/dev/null 2>&1; then
+  if [ "$STATUS" -eq 0 ]; then
+    termux-notification --title "ismp3" \
+      --content "تم التحويل — تحقق من مجلد Music/ismp3" --priority low || true
+  else
+    termux-notification --title "ismp3" \
+      --content "فشل التحويل — راجع $LOG" --priority high || true
+  fi
+fi
+
+exit "$STATUS"
