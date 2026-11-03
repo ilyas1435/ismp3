@@ -11,7 +11,8 @@ import threading
 import time
 from collections import deque
 from pathlib import Path
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from .config import Settings
 from .naming import parse_artist_title

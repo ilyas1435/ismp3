@@ -7,7 +7,7 @@ import threading
 from typing import Any
 
 from .config import seen_file
-from .util import now_iso, read_json, atomic_write_json
+from .util import atomic_write_json, now_iso, read_json
 
 
 def key_for(info: dict[str, Any], url: str = "") -> str:

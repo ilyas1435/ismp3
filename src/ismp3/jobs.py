@@ -14,7 +14,8 @@ import urllib.request
 import zipfile
 from dataclasses import asdict, dataclass, field, fields
 from pathlib import Path, PurePosixPath
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 from urllib.parse import urlparse
 
 from . import fetch, naming, transcode
@@ -675,7 +676,7 @@ class JobManager:
                         workdir,
                         settings,
                         token=token,
-                        on_progress=lambda fraction, speed: self._progress(
+                        on_progress=lambda fraction, speed, position=position: self._progress(
                             job,
                             ((position - 1) + fraction) / total,
                             f"تنزيل {position}/{total}",

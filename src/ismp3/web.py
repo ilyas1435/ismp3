@@ -42,10 +42,9 @@ import traceback
 import urllib.parse
 import webbrowser
 from datetime import datetime
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
-
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from . import __version__, archive_org, fetch, naming, transcode
 from .config import (
@@ -60,13 +59,13 @@ from .jobs import JobManager
 from .probe import probe
 from .util import (
     MEDIA_EXTS,
+    atomic_write_text,
     estimate_size,
     human_size,
     is_url,
     parse_pick,
     within_roots,
     zip_files,
-    atomic_write_text,
 )
 
 MAX_JSON = 2 * 1024 * 1024

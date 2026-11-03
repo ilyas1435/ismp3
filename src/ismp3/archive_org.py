@@ -6,7 +6,8 @@ import os
 import re
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from .config import ia_credentials_file
 from .util import atomic_write_json, new_id, read_json

@@ -12,7 +12,8 @@ import uuid
 import zipfile
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Iterable
+from collections.abc import Iterable
+from typing import Any
 
 MEDIA_EXTS = {
     # audio
