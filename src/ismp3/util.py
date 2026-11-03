@@ -10,9 +10,9 @@ import tempfile
 import threading
 import uuid
 import zipfile
+from collections.abc import Iterable
 from datetime import UTC, datetime
 from pathlib import Path
-from collections.abc import Iterable
 from typing import Any
 
 MEDIA_EXTS = {

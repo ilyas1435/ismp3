@@ -9,8 +9,8 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from pathlib import Path
 from collections.abc import Iterator
+from pathlib import Path
 from typing import Any
 
 import pytest

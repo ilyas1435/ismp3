@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import os
 import re
+from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
-from collections.abc import Callable
 from typing import Any
 
 from .config import ia_credentials_file

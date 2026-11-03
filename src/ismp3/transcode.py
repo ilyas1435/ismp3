@@ -10,8 +10,8 @@ import subprocess
 import threading
 import time
 from collections import deque
-from pathlib import Path
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
 from .config import Settings

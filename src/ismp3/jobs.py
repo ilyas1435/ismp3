@@ -12,9 +12,9 @@ import threading
 import time
 import urllib.request
 import zipfile
+from collections.abc import Callable
 from dataclasses import asdict, dataclass, field, fields
 from pathlib import Path, PurePosixPath
-from collections.abc import Callable
 from typing import Any
 from urllib.parse import urlparse
 
