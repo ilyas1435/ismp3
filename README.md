@@ -9,6 +9,8 @@
 - لا React، لا FastAPI، لا PostgreSQL، لا Docker، لا خدمات وسيطة.
 
 > **الرابط:** <https://github.com/ilyas1435/ismp3>
+>
+> [![CI](https://github.com/ilyas1435/ismp3/actions/workflows/ci.yml/badge.svg)](https://github.com/ilyas1435/ismp3/actions/workflows/ci.yml)
 
 ---
 
