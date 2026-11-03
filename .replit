@@ -1,16 +1,16 @@
+entrypoint = "README.md"
 run = "bash scripts/run-replit.sh"
 modules = ["python-3.11"]
-hidden = [".config", "venv", ".venv", "__pycache__", "*.pyc"]
-
-[nix]
-channel = "stable-24_05"
-packages = ["ffmpeg", "deno"]
+hidden = [".config", "venv", ".venv", "__pycache__", "*.pyc", "data"]
 
 [env]
 PYTHONPATH = "src"
 ISMP3_CONFIG = "data/config.toml"
 PYTHONUNBUFFERED = "1"
+PIP_DISABLE_PIP_VERSION_CHECK = "1"
 
+# Replit routes external port 80 to this internal port.
+# The server MUST listen on the same localPort (scripts/run-replit.sh does).
 [[ports]]
-localPort = 8787
+localPort = 3000
 externalPort = 80
