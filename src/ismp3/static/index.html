@@ -304,14 +304,19 @@
             <option value="48000">48000</option>
           </select>
         </label>
-        <label class="field">
-          <span>رمز الدخول <small>فارغ = بلا حماية</small></span>
-          <input id="setToken" type="text" dir="ltr" spellcheck="false" placeholder="token">
-        </label>
       </div>
       <div class="checks">
         <label class="check"><input type="checkbox" id="setCover"> غلاف</label>
         <label class="check"><input type="checkbox" id="setPlaylist"> قوائم التشغيل</label>
+      </div>
+    </section>
+
+    <section class="settings-section hidden" id="updateSection">
+      <h3>🔄 تحديث التطبيق</h3>
+      <p class="muted small">على Replit: يجلب آخر نسخة من GitHub دون فتح Shell. بعد التحديث أوقف الـ Repl ثم اضغط Run.</p>
+      <div class="row between">
+        <span class="small" id="updateStatus">—</span>
+        <button type="button" class="btn" id="updateApp">⬇️ تحديث الآن</button>
       </div>
     </section>
 
@@ -371,21 +376,6 @@
   <div class="dialog-foot">
     <button type="button" class="btn primary" id="browseUseDir">✅ استخدام هذا المجلد</button>
     <button type="button" class="btn ghost" id="browseClose">إغلاق</button>
-  </div>
-</dialog>
-
-<!-- ═══ رمز الدخول ═══ -->
-<dialog id="tokenDialog" class="dialog small-dialog">
-  <form method="dialog" class="dialog-head">
-    <h2>🔐 رمز الدخول</h2>
-    <button class="icon-btn" value="close" aria-label="إغلاق">✕</button>
-  </form>
-  <div class="dialog-body">
-    <p class="small">هذا الخادم محمي. الصق الرمز الذي ظهر في الطرفية عند التشغيل.</p>
-    <input id="tokenInput" type="text" dir="ltr" spellcheck="false" placeholder="token" class="search">
-  </div>
-  <div class="dialog-foot">
-    <button type="button" class="btn primary" id="tokenSave">دخول</button>
   </div>
 </dialog>
 

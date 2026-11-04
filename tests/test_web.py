@@ -27,7 +27,6 @@ def http(
     method: str = "GET",
     payload: Any = None,
     raw: bytes | None = None,
-    token: str = "",
 ) -> tuple[int, Any]:
     headers: dict[str, str] = {}
     data: bytes | None = raw
@@ -35,8 +34,6 @@ def http(
         data = json.dumps(payload).encode("utf-8")
         headers["Content-Type"] = "application/json"
     request = urllib.request.Request(base + path, data=data, method=method, headers=headers)
-    if token:
-        request.add_header("Authorization", f"Bearer {token}")
     try:
         with urllib.request.urlopen(request, timeout=30) as response:
             body = response.read()
@@ -55,9 +52,9 @@ def http(
 
 
 @contextlib.contextmanager
-def running_app(tmp_path: Path, token: str = "") -> Iterator[tuple[str, App]]:
+def running_app(tmp_path: Path) -> Iterator[tuple[str, App]]:
     settings = Settings(output_dir=str(tmp_path / "out"), bitrate=24, jobs=1)
-    app = App(settings, token=token)
+    app = App(settings)
     server = Server(("127.0.0.1", 0), Handler)
     server.app = app
     thread = threading.Thread(target=server.serve_forever, daemon=True)
@@ -86,7 +83,7 @@ def make_wav(path: Path, seconds: float = 1.0) -> Path:
 
 
 def test_health_is_public(tmp_path: Path, isolated: Path) -> None:
-    with running_app(tmp_path, token="secret") as (base, _app):
+    with running_app(tmp_path) as (base, _app):
         status, data = http(base, "/api/health")
         assert status == 200
         assert data["ok"] is True
@@ -94,7 +91,7 @@ def test_health_is_public(tmp_path: Path, isolated: Path) -> None:
 
 
 def test_index_and_static(tmp_path: Path, isolated: Path) -> None:
-    with running_app(tmp_path, token="secret") as (base, _app):
+    with running_app(tmp_path) as (base, _app):
         for path, needle in (
             ("/", "ismp3"),
             ("/static/style.css", "--accent"),
@@ -107,13 +104,26 @@ def test_index_and_static(tmp_path: Path, isolated: Path) -> None:
                 assert needle in body
 
 
-def test_token_required(tmp_path: Path, isolated: Path) -> None:
-    with running_app(tmp_path, token="secret") as (base, _app):
+def test_api_open_without_token(tmp_path: Path, isolated: Path) -> None:
+    with running_app(tmp_path) as (base, _app):
         status, data = http(base, "/api/stats")
-        assert status == 401
-        status, data = http(base, "/api/stats", token="secret")
         assert status == 200
         assert "stats" in data
+        status, settings = http(base, "/api/settings")
+        assert status == 200
+        assert "token" not in settings
+        assert "auth_required" not in settings
+
+
+def test_update_endpoint_disabled_outside_replit(
+    tmp_path: Path, isolated: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    for name in ("REPL_ID", "REPLIT_DEV_DOMAIN", "REPLIT_DB_URL", "ISMP3_ALLOW_SELF_UPDATE"):
+        monkeypatch.delenv(name, raising=False)
+    with running_app(tmp_path) as (base, _app):
+        status, data = http(base, "/api/update", method="POST")
+        assert status == 400
+        assert "Replit" in data["error"]
 
 
 def test_settings_round_trip(tmp_path: Path, isolated: Path) -> None:

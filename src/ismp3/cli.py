@@ -486,6 +486,12 @@ def cmd_doctor(args: argparse.Namespace) -> int:
 
 
 def cmd_update(args: argparse.Namespace) -> int:
+    if getattr(args, "self_update", False):
+        from . import updater
+
+        ok, _updated, message = updater.pull()
+        print(message)
+        return 0 if ok else 1
     print("جارٍ تحديث yt-dlp…")
     result = subprocess.run(
         [sys.executable, "-m", "pip", "install", "-U", "yt-dlp"],
@@ -509,7 +515,6 @@ def cmd_serve(args: argparse.Namespace) -> int:
         settings,
         host=args.host or settings.host,
         port=args.port or settings.port,
-        token=args.token if args.token is not None else settings.token,
         open_browser=not args.no_browser,
     )
 
@@ -605,13 +610,18 @@ def build_parser() -> argparse.ArgumentParser:
     doctor_cmd = add_common(sub.add_parser("doctor", help="فحص البيئة", ))
     doctor_cmd.set_defaults(func=cmd_doctor)
 
-    update_cmd = add_common(sub.add_parser("update", help="تحديث yt-dlp", ))
+    update_cmd = add_common(sub.add_parser("update", help="تحديث yt-dlp أو التطبيق", ))
+    update_cmd.add_argument(
+        "--self",
+        dest="self_update",
+        action="store_true",
+        help="تحديث نسخة ismp3 من Git (git pull)",
+    )
     update_cmd.set_defaults(func=cmd_update)
 
     serve_cmd = add_common(sub.add_parser("serve", help="تشغيل الواجهة العربية", ))
     serve_cmd.add_argument("--host", default="")
     serve_cmd.add_argument("--port", type=int, default=0)
-    serve_cmd.add_argument("--token", default=None)
     serve_cmd.add_argument("--no-browser", action="store_true")
     serve_cmd.set_defaults(func=cmd_serve)
 

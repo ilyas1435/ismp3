@@ -25,11 +25,11 @@ GET    /api/files                     files in the output folder
 GET    /api/settings | POST           read/update settings
 GET/POST/DELETE /api/cookies          cookies.txt management
 GET/POST/DELETE /api/ia               Archive.org credentials
+POST   /api/update                    git pull (Replit only)
 """
 
 from __future__ import annotations
 
-import hmac
 import json
 import mimetypes
 import os
@@ -46,7 +46,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
-from . import __version__, archive_org, fetch, naming, transcode
+from . import __version__, archive_org, fetch, naming, transcode, updater
 from .config import (
     Settings,
     config_dir,
@@ -70,7 +70,6 @@ from .util import (
 
 MAX_JSON = 2 * 1024 * 1024
 STATIC_DIR = Path(__file__).with_name("static")
-COOKIE_NAME = "ismp3_token"
 VERSION = __version__
 
 
@@ -96,10 +95,9 @@ def _roots(settings: Settings) -> list[Path]:
 
 
 class App:
-    def __init__(self, settings: Settings, token: str = "") -> None:
+    def __init__(self, settings: Settings) -> None:
         settings.ensure_dirs()
         self.settings = settings
-        self.token = token or ""
         self.manager = JobManager(settings)
         self.roots = _roots(settings)
         self.started = time.time()
@@ -130,23 +128,6 @@ class Handler(BaseHTTPRequestHandler):
         return {key: values[-1] for key, values in urllib.parse.parse_qs(
             urllib.parse.urlparse(self.path).query, keep_blank_values=True
         ).items()}
-
-    def _cookie_token(self) -> str:
-        raw = self.headers.get("Cookie") or ""
-        for chunk in raw.split(";"):
-            name, _, value = chunk.strip().partition("=")
-            if name == COOKIE_NAME:
-                return value
-        return ""
-
-    def _authorized(self, query: dict[str, str]) -> bool:
-        expected = self.app.token
-        if not expected:
-            return True
-        header = self.headers.get("Authorization") or ""
-        bearer = header[7:].strip() if header.lower().startswith("bearer ") else ""
-        supplied = query.get("token") or bearer or self._cookie_token()
-        return bool(supplied) and hmac.compare_digest(str(supplied), expected)
 
     def _json(self, data: Any, status: int = 200) -> None:
         body = json.dumps(data, ensure_ascii=False, default=str).encode("utf-8")
@@ -294,9 +275,6 @@ class Handler(BaseHTTPRequestHandler):
         if parts[1:2] == ["health"]:
             self._health()
             return
-        if not self._authorized(query):
-            self._error("رمز الدخول مطلوب — افتح الرابط مع ?token=…", 401)
-            return
 
         route = parts[1:]
         if route == ["events"]:
@@ -355,9 +333,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def _public_settings(self) -> dict[str, Any]:
         data = self.app.settings.to_dict()
-        data["token"] = "***" if self.app.token else ""
-        data["auth_required"] = bool(self.app.token)
         data["config_file"] = str(config_dir() / "config.toml")
+        data["can_update"] = updater.update_supported()
         return data
 
     def _job_get(self, rest: list[str]) -> None:
@@ -590,9 +567,6 @@ class Handler(BaseHTTPRequestHandler):
         if parts[:1] != ["api"]:
             self._error("غير موجود", 404)
             return
-        if not self._authorized(query):
-            self._error("رمز الدخول مطلوب", 401)
-            return
         route = parts[1:]
 
         if route == ["jobs"]:
@@ -614,6 +588,8 @@ class Handler(BaseHTTPRequestHandler):
             self._ia_save()
         elif route == ["upload-ia"]:
             self._upload_ia()
+        elif route == ["update"]:
+            self._self_update()
         else:
             self._error("مسار غير معروف", 404)
 
@@ -814,7 +790,7 @@ class Handler(BaseHTTPRequestHandler):
         allowed = {
             "output_dir", "bitrate", "mode", "sample_rate", "channels", "cover",
             "layout", "speed", "playlist", "jobs", "client", "audio_lang",
-            "cookies_file", "token", "retries", "fragment_jobs", "rate_limit", "proxy",
+            "cookies_file", "retries", "fragment_jobs", "rate_limit", "proxy",
         }
         current = self.app.settings.to_dict()
         for key, value in data.items():
@@ -834,8 +810,6 @@ class Handler(BaseHTTPRequestHandler):
         path = save_settings(settings)
         self.app.settings = settings
         self.app.manager.settings = settings
-        if "token" in data:
-            self.app.token = str(data.get("token") or "")
         self.app.refresh_roots()
         result = self._public_settings()
         result["saved_to"] = str(path)
@@ -906,16 +880,23 @@ class Handler(BaseHTTPRequestHandler):
         )
         self._json(job.public(), 201)
 
+    def _self_update(self) -> None:
+        if not updater.update_supported():
+            self._error(
+                "التحديث من الواجهة متاح على Replit فقط. "
+                "على الأنظمة الأخرى نفّذ: ismp3 update --self",
+                400,
+            )
+            return
+        ok, updated, message = updater.pull()
+        self._json({"ok": ok, "updated": updated, "message": message}, 200 if ok else 500)
+
     # ── DELETE ─────────────────────────────────────────────────────────────
 
     def _route_delete(self) -> None:
         parts = self._parts()
-        query = self._query()
         if parts[:1] != ["api"]:
             self._error("غير موجود", 404)
-            return
-        if not self._authorized(query):
-            self._error("رمز الدخول مطلوب", 401)
             return
         route = parts[1:]
         if len(route) == 2 and route[0] == "jobs":
@@ -1018,17 +999,10 @@ class Server(ThreadingHTTPServer):
     app: App
 
 
-def _generate_token() -> str:
-    import secrets
-
-    return secrets.token_urlsafe(18)
-
-
 def serve(
     settings: Settings,
     host: str = "",
     port: int = 0,
-    token: str = "",
     open_browser: bool = True,
 ) -> int:
     settings.ensure_dirs()
@@ -1043,18 +1017,12 @@ def serve(
     if is_replit() and host in {"127.0.0.1", "localhost", ""}:
         host = "0.0.0.0"
 
-    token = str(token or settings.token or "").strip()
     external = host not in {"127.0.0.1", "localhost", "::1"}
-    if external and not token:
-        token = _generate_token()
-        print("🔐 تم توليد رمز دخول لأن الخادم مفتوح للشبكة.")
-
-    app = App(settings, token=token)
+    app = App(settings)
     server = Server((host, port), Handler)
     server.app = app
     shown_host = "127.0.0.1" if host in {"0.0.0.0", "::"} else host
-    query = f"?token={urllib.parse.quote(app.token)}" if app.token else ""
-    url = f"http://{shown_host}:{server.server_port}/{query}"
+    url = f"http://{shown_host}:{server.server_port}/"
     print("─" * 60)
     print(f"  ismp3 {VERSION} — واجهة عربية")
     print(f"  المخرجات: {settings.output_path}")
@@ -1062,9 +1030,7 @@ def serve(
     if external:
         domain = os.environ.get("REPLIT_DEV_DOMAIN") or ""
         if domain:
-            print(f"  Replit:   https://{domain}/{query}")
-    if app.token:
-        print("  رمز الدخول إلزامي (تجاهله في الرابط أعلاه).")
+            print(f"  Replit:   https://{domain}/")
     print("  Ctrl+C للإيقاف.")
     print("─" * 60)
 

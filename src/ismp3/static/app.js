@@ -39,26 +39,15 @@
     browseMode: "sources",
     events: null,
     pollTimer: null,
-    tokenPrompted: false,
     audio: null,
     playingBtn: null,
     renderQueued: false,
     libraryTimer: null,
   };
 
-  // ── auth ─────────────────────────────────────────────────────────────
-  const params = new URLSearchParams(location.search);
-  let token = params.get("token") || localStorage.getItem("ismp3_token") || "";
-  if (params.get("token")) {
-    localStorage.setItem("ismp3_token", params.get("token"));
-    const clean = new URL(location.href);
-    clean.searchParams.delete("token");
-    history.replaceState({}, "", clean.pathname + clean.search + clean.hash);
-  }
-
+  // ── URLs ─────────────────────────────────────────────────────────────
   function apiUrl(path, extra) {
     const url = new URL(path, location.origin);
-    if (token) url.searchParams.set("token", token);
     if (extra) {
       for (const [key, value] of Object.entries(extra)) {
         if (value !== undefined && value !== null && value !== "") {
@@ -77,17 +66,12 @@
     if (opts.body && typeof opts.body === "string" && !headers["Content-Type"]) {
       headers["Content-Type"] = "application/json";
     }
-    if (token) headers["Authorization"] = `Bearer ${token}`;
     let response;
     try {
       response = await fetch(apiUrl(path, paramsIn), { ...opts, headers });
     } catch (err) {
       setOnline(false);
       throw new Error("تعذّر الاتصال بالخادم");
-    }
-    if (response.status === 401) {
-      showTokenDialog();
-      throw new Error("رمز الدخول مطلوب");
     }
     const type = response.headers.get("Content-Type") || "";
     let data;
@@ -101,16 +85,6 @@
       throw new Error(message);
     }
     return data;
-  }
-
-  function showTokenDialog() {
-    if (state.tokenPrompted) return;
-    state.tokenPrompted = true;
-    const dialog = $("#tokenDialog");
-    const input = $("#tokenInput");
-    input.value = token || "";
-    if (!dialog.open) dialog.showModal();
-    setTimeout(() => input.focus(), 50);
   }
 
   // ── helpers ──────────────────────────────────────────────────────────
@@ -185,8 +159,8 @@
       $("#statSize").textContent = stats.size_text || "0 B";
       $("#statSeen").textContent = stats.seen ?? 0;
       $("#statFree").textContent = disk.free_text || "—";
-    } catch (err) {
-      if (!/رمز الدخول/.test(err.message)) setOnline(false);
+    } catch {
+      setOnline(false);
     }
   }
 
@@ -197,7 +171,7 @@
       for (const job of data.jobs || []) state.jobs.set(job.id, job);
       scheduleRender();
     } catch (err) {
-      if (!/رمز الدخول/.test(err.message)) toast(err.message, "err");
+      toast(err.message, "err");
     }
   }
 
@@ -476,12 +450,7 @@
         const response = await fetch(apiUrl("/api/upload", { name: file.name }), {
           method: "POST",
           body: file,
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
-        if (response.status === 401) {
-          showTokenDialog();
-          throw new Error("رمز الدخول مطلوب");
-        }
         const data = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(data.error || "فشل الرفع");
         added.push(data.path);
@@ -518,10 +487,8 @@
         </div>`;
       }).join("");
     } catch (err) {
-      if (!/رمز الدخول/.test(err.message)) {
-        $("#libraryEmpty").classList.remove("hidden");
-        $("#libraryEmpty").textContent = err.message;
-      }
+      $("#libraryEmpty").classList.remove("hidden");
+      $("#libraryEmpty").textContent = err.message;
     }
   }
 
@@ -587,9 +554,9 @@
       $("#setSample").value = String(s.sample_rate || 0);
       $("#setCover").checked = !!s.cover;
       $("#setPlaylist").checked = !!s.playlist;
-      $("#setToken").value = "";
+      $("#updateSection").classList.toggle("hidden", !s.can_update);
       $("#settingsInfo").textContent =
-        `الإصدار ${$("#versionText").textContent || ""} · ملف الإعدادات: ${s.config_file || ""} · ${s.auth_required ? "محمي برمز" : "بلا رمز"}`;
+        `الإصدار ${$("#versionText").textContent || ""} · ملف الإعدادات: ${s.config_file || ""}`;
       await Promise.all([loadCookiesStatus(), loadIaStatus()]);
       if (!dialog.open) dialog.showModal();
     } catch (err) {
@@ -609,8 +576,6 @@
       cover: $("#setCover").checked,
       playlist: $("#setPlaylist").checked,
     };
-    const newToken = $("#setToken").value.trim();
-    if (newToken) payload.token = newToken;
     const button = $("#settingsSave");
     button.disabled = true;
     try {
@@ -619,12 +584,6 @@
         body: JSON.stringify(payload),
       });
       state.settings = saved;
-      if (newToken) {
-        token = newToken;
-        localStorage.setItem("ismp3_token", token);
-        state.tokenPrompted = false;
-        connectEvents();
-      }
       toast("حُفظت الإعدادات", "ok");
       syncAddForm(saved);
       refreshStats();
@@ -951,21 +910,22 @@
       if (target.dataset.dir) await loadBrowse(target.dataset.dir);
     });
 
-    // token
-    $("#tokenSave").addEventListener("click", () => {
-      const value = $("#tokenInput").value.trim();
-      if (!value) return;
-      token = value;
-      localStorage.setItem("ismp3_token", token);
-      state.tokenPrompted = false;
-      $("#tokenDialog").close();
-      connectEvents();
-      refreshAll();
-    });
-    $("#tokenInput").addEventListener("keydown", (event) => {
-      if (event.key === "Enter") {
-        event.preventDefault();
-        $("#tokenSave").click();
+    // update (Replit)
+    $("#updateApp").addEventListener("click", async () => {
+      if (!confirm("سيتم جلب آخر نسخة من GitHub واستبدال ملفات التطبيق. هل تريد المتابعة؟")) return;
+      const button = $("#updateApp");
+      const status = $("#updateStatus");
+      button.disabled = true;
+      status.textContent = "جارٍ التحديث…";
+      try {
+        const data = await api("/api/update", { method: "POST" });
+        status.textContent = data.message;
+        toast(data.message, data.updated ? "ok" : "");
+      } catch (err) {
+        status.textContent = err.message;
+        toast(err.message, "err");
+      } finally {
+        button.disabled = false;
       }
     });
 

@@ -102,7 +102,6 @@ class Settings:
     audio_lang: str = "original"
     playlist: bool = True
     cookies_file: str = ""
-    token: str = ""
     host: str = "127.0.0.1"
     port: int = 8787
     retries: int = 3
@@ -137,7 +136,6 @@ class Settings:
         self.audio_lang = str(self.audio_lang or "original")
         self.playlist = bool(self.playlist)
         self.cookies_file = str(self.cookies_file or "")
-        self.token = str(self.token or "")
         self.host = str(self.host or "127.0.0.1")
         self.port = int(max(1, min(65535, int(self.port))))
         self.retries = int(max(0, min(10, int(self.retries))))
