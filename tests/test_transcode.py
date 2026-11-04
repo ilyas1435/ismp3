@@ -12,6 +12,7 @@ from ismp3.probe import probe
 from ismp3.transcode import (
     atempo_chain,
     auto_sample_rate,
+    build_args,
     metadata_from_ytdlp,
     validate,
     vbr_quality,
@@ -84,6 +85,13 @@ def test_vbr_quality() -> None:
     assert vbr_quality(16) == 9
     assert vbr_quality(64) == 6
     assert vbr_quality(320) == 1
+
+
+def test_build_args_fast_encoder_flags(tmp_path: Path) -> None:
+    settings = Settings(output_dir=str(tmp_path), bitrate=24, channels=1)
+    args = build_args(tmp_path / "in.wav", tmp_path / "out.mp3", settings)
+    assert args[args.index("-compression_level") + 1] == "5"
+    assert args[args.index("-threads") + 1] == "0"
 
 
 def test_metadata_from_ytdlp() -> None:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+import io
 import json
 import shutil
 import subprocess
@@ -9,6 +10,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import zipfile
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
@@ -16,6 +18,7 @@ from typing import Any
 import pytest
 
 from ismp3.config import Settings
+from ismp3.jobs import Job
 from ismp3.web import App, Handler, Server
 
 FFMPEG = shutil.which("ffmpeg")
@@ -144,6 +147,41 @@ def test_settings_round_trip(tmp_path: Path, isolated: Path) -> None:
         assert data["output_dir"] == str(out)
         assert app.settings.output_path == out
         assert out.is_dir()
+
+
+def test_bulk_bundle_and_delete(tmp_path: Path, isolated: Path) -> None:
+    first = tmp_path / "first.mp3"
+    second = tmp_path / "second.mp3"
+    first.write_bytes(b"a" * 64)
+    second.write_bytes(b"b" * 64)
+
+    with running_app(tmp_path) as (base, app):
+        job = Job(
+            id="bulk-job",
+            kind="file",
+            status="done",
+            title="bulk",
+            outputs=[str(first), str(second)],
+        )
+        app.manager.jobs[job.id] = job
+        app.manager.order.append(job.id)
+
+        status, body = http(base, "/api/jobs/bundle?ids=bulk-job")
+        assert status == 200, body
+        with zipfile.ZipFile(io.BytesIO(body)) as archive:
+            names = sorted(archive.namelist())
+        assert names == ["first.mp3", "second.mp3"]
+
+        status, data = http(
+            base,
+            "/api/jobs/bulk-delete",
+            method="POST",
+            payload={"ids": ["bulk-job"]},
+        )
+        assert status == 200, data
+        assert data["deleted"] == 1
+        assert app.manager.get("bulk-job") is None
+        assert not first.exists()
 
 
 def test_upload_and_browse(tmp_path: Path, isolated: Path) -> None:

@@ -39,10 +39,15 @@ def _format_selector(settings: Settings, url: str) -> str:
     if not is_youtube(url):
         return "bestaudio/best"
     language = (settings.audio_lang or "original").strip()
+    # The final file is re-encoded to at most 48 kbps in the tiny presets.
+    # Downloading the *smallest* audio stream there saves a lot of bandwidth
+    # (and time) without a noticeable quality loss. For higher bitrates we
+    # still ask for the best source.
+    base = "worstaudio" if int(settings.bitrate or 0) <= 48 else "bestaudio"
     if language and language != "original":
-        return f"bestaudio[language={language}]/bestaudio/best"
+        return f"{base}[language={language}]/{base}/bestaudio/best"
     # language_preference > 0 marks the original track; dubbed tracks get -1.
-    return "bestaudio[language_preference>0]/bestaudio/best"
+    return f"{base}[language_preference>0]/{base}/bestaudio/best"
 
 
 def _cookies(settings: Settings) -> str | None:

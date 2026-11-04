@@ -16,7 +16,7 @@ from collections.abc import Callable
 from dataclasses import asdict, dataclass, field, fields
 from pathlib import Path, PurePosixPath
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 from . import fetch, naming, transcode
 from .config import Settings, data_dir, jobs_file, work_root
@@ -635,6 +635,13 @@ class JobManager:
             self._handle_archive(job, local, settings, token, errors)
             return
 
+        # Fast path: a plain YouTube video link does not need a metadata
+        # request first. yt-dlp's own extract_info(download=True) already
+        # returns the title, so we avoid doing the same work twice.
+        if self._is_plain_youtube_video(url, settings):
+            self._handle_youtube_single(job, url, settings, token, workdir)
+            return
+
         info = fetch.inspect(url, settings)
         if info.get("kind") == "playlist":
             job.kind = "playlist"
@@ -745,6 +752,71 @@ class JobManager:
         if fetch.is_youtube(url) and item_id:
             return f"youtube:{item_id}"
         return key_for(entry, url)
+
+    def _is_plain_youtube_video(self, url: str, settings: Settings) -> bool:
+        """True for ``watch?v=…`` / ``youtu.be/…`` without a playlist to expand."""
+        if not fetch.is_youtube(url):
+            return False
+        low = url.lower()
+        if "list=" in low and settings.playlist:
+            return False
+        if any(part in low for part in ("/playlist", "/@", "/channel/", "/user/", "/c/")):
+            return False
+        return bool(_youtube_video_id(url))
+
+    def _handle_youtube_single(
+        self,
+        job: Job,
+        url: str,
+        settings: Settings,
+        token: CancelToken,
+        workdir: Path,
+    ) -> None:
+        item_id = _youtube_video_id(url)
+        key = f"youtube:{item_id}"
+        job.kind = "video"
+        job.seen_key = key
+        force = bool((job.extra or {}).get("force"))
+        if not force and self.library.seen(key):
+            existing = self.library.get(key) or {}
+            existing_path = Path(existing["path"]) if existing.get("path") else None
+            if existing_path and existing_path.is_file():
+                job.title = existing.get("title") or job.title
+                job.outputs = [str(existing_path)]
+                job.size = existing_path.stat().st_size
+                job.count = 1
+                job.done_count = 1
+                self._update(
+                    job,
+                    status="done",
+                    label="موجود مسبقاً",
+                    progress=1.0,
+                    completed_at=now_iso(),
+                )
+                return
+            self.library.forget(key)
+
+        self._update(job, status="running", label="جارٍ التنزيل…", count=1)
+        try:
+            result = fetch.download_one(
+                url,
+                workdir,
+                settings,
+                token=token,
+                on_progress=lambda fraction, speed: self._progress(
+                    job, fraction, "جارٍ التنزيل…", speed
+                ),
+                force=force,
+            )
+        except fetch.AlreadyDownloaded:
+            job.done_count = 1
+            self._progress(job, 1.0, "موجود مسبقاً")
+            return
+        info = result["info"]
+        job.title = info.get("title") or job.title
+        job.count = 1
+        job.done_count = 1
+        self._convert_downloaded(job, result, settings, token, 1, 1, key)
 
     def _convert_downloaded(
         self,
@@ -969,6 +1041,24 @@ class JobManager:
         if path.suffix.lower() in ARCHIVE_EXTS:
             return "archive"
         return "file"
+
+
+def _youtube_video_id(url: str) -> str:
+    """Extract the video id from common YouTube URL shapes (no network)."""
+    try:
+        parsed = urlparse(url)
+    except ValueError:
+        return ""
+    host = parsed.netloc.lower()
+    if "youtu.be" in host:
+        return parsed.path.strip("/").split("/")[0]
+    values = parse_qs(parsed.query).get("v")
+    if values:
+        return str(values[0])
+    parts = [part for part in parsed.path.split("/") if part]
+    if len(parts) >= 2 and parts[0] in {"shorts", "embed", "live", "v"}:
+        return parts[1]
+    return ""
 
 
 def _extract_archive(path: Path, dest: Path) -> None:

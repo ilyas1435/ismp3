@@ -103,7 +103,7 @@ def pull(root: Path | None = None) -> tuple[bool, bool, str]:
         new = after.stdout.strip() if after.returncode == 0 else "?"
         if old == new:
             return True, False, f"أنت على أحدث نسخة ({new})."
-        return True, True, f"تم التحديث من {old} إلى {new}. أوقف التطبيق ثم شغّله من جديد."
+        return True, True, f"تم التحديث من {old} إلى {new}. سيعيد التطبيق تشغيل نفسه تلقائياً."
     except FileNotFoundError:
         return False, False, "git غير مثبّت على هذا الخادم."
     except subprocess.TimeoutExpired:

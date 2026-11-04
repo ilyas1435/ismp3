@@ -285,6 +285,8 @@ class Handler(BaseHTTPRequestHandler):
             self._json(self.app.manager.disk())
         elif route == ["jobs"]:
             self._json({"jobs": self._jobs(query)})
+        elif route == ["jobs", "bundle"]:
+            self._jobs_bundle()
         elif len(route) >= 2 and route[0] == "jobs":
             self._job_get(route[1:])
         elif route == ["browse"]:
@@ -335,6 +337,7 @@ class Handler(BaseHTTPRequestHandler):
         data = self.app.settings.to_dict()
         data["config_file"] = str(config_dir() / "config.toml")
         data["can_update"] = updater.update_supported()
+        data["auto_restart"] = os.environ.get("ISMP3_AUTO_RESTART") == "1"
         return data
 
     def _job_get(self, rest: list[str]) -> None:
@@ -396,6 +399,67 @@ class Handler(BaseHTTPRequestHandler):
                 temp.unlink()
             except OSError:
                 pass
+
+    def _selected_ids(self, data: dict[str, Any] | None = None) -> list[str]:
+        if data is not None:
+            ids = data.get("ids") or []
+        else:
+            ids = self._query().get("ids") or ""
+        if isinstance(ids, str):
+            ids = [part for part in ids.split(",") if part.strip()]
+        return [str(item).strip() for item in ids if str(item).strip()]
+
+    def _jobs_bundle(self) -> None:
+        """ZIP the outputs of several finished jobs in one download."""
+        data = self._json_body() if self.command == "POST" else None
+        ids = self._selected_ids(data)
+        if not ids:
+            self._error("حدّد مهمة واحدة على الأقل", 400)
+            return
+        files: list[str] = []
+        for job_id in ids:
+            job = self.app.manager.get(job_id)
+            if not job or job.status != "done":
+                continue
+            for output in job.outputs:
+                path = Path(output)
+                if path.is_file() and path.suffix.lower() != ".zip":
+                    files.append(str(path))
+        if not files:
+            self._error("لا توجد ملفات جاهزة في التحديد", 404)
+            return
+        fd, temp_name = tempfile.mkstemp(prefix="ismp3-bundle-", suffix=".zip")
+        os.close(fd)
+        temp = Path(temp_name)
+        try:
+            zip_files(files, temp)
+            self._send_file(temp, download=True, name=f"ismp3-selected-{len(files)}.zip")
+        finally:
+            try:
+                temp.unlink()
+            except OSError:
+                pass
+
+    def _jobs_bulk_delete(self) -> None:
+        data = self._json_body()
+        ids = self._selected_ids(data)
+        if not ids:
+            self._error("حدّد مهمة واحدة على الأقل", 400)
+            return
+        self._json({"deleted": self.app.manager.delete_many(ids)})
+
+    def _jobs_bulk_ia(self) -> None:
+        data = self._json_body()
+        ids = self._selected_ids(data)
+        if not ids:
+            self._error("حدّد مهمة واحدة على الأقل", 400)
+            return
+        job = self.app.manager.submit_upload(
+            ids,
+            identifier=str(data.get("identifier") or ""),
+            title=str(data.get("title") or ""),
+        )
+        self._json(job.public(), 201)
 
     def _browse(self, query: dict[str, str]) -> None:
         raw = query.get("path", "").strip()
@@ -574,6 +638,12 @@ class Handler(BaseHTTPRequestHandler):
         elif route == ["jobs", "clear"]:
             count = self.app.manager.clear_finished()
             self._json({"deleted": count})
+        elif route == ["jobs", "bundle"]:
+            self._jobs_bundle()
+        elif route == ["jobs", "bulk-delete"]:
+            self._jobs_bulk_delete()
+        elif route == ["jobs", "upload-ia"]:
+            self._jobs_bulk_ia()
         elif len(route) == 3 and route[0] == "jobs":
             self._job_action(route[1], route[2])
         elif route == ["probe"]:
@@ -889,7 +959,18 @@ class Handler(BaseHTTPRequestHandler):
             )
             return
         ok, updated, message = updater.pull()
-        self._json({"ok": ok, "updated": updated, "message": message}, 200 if ok else 500)
+        restart = bool(ok and updated and os.environ.get("ISMP3_AUTO_RESTART") == "1")
+        if restart:
+            # The server must first flush this JSON response. The wrapper
+            # (scripts/run-loop.sh) restarts it only when the exit code is 75.
+            def _restart() -> None:
+                os._exit(75)
+
+            threading.Timer(1.5, _restart).start()
+        self._json(
+            {"ok": ok, "updated": updated, "restart": restart, "message": message},
+            200 if ok else 500,
+        )
 
     # ── DELETE ─────────────────────────────────────────────────────────────
 

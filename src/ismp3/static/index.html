@@ -3,83 +3,68 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#0b1220">
-  <meta name="description" content="ismp3 — حوّل أي رابط أو ملف صوت/فيديو إلى MP3 بأقل حجم. واجهة عربية، خفيفة، تعمل على Termux وReplit.">
+  <meta name="theme-color" content="#f6f7f9">
+  <meta name="description" content="ismp3 — حوّل أي رابط أو ملف صوت/فيديو إلى MP3 بأقل حجم. واجهة عربية بسيطة تعمل على Termux وReplit.">
   <title>ismp3 — أي وسائط إلى MP3</title>
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-<a class="skip" href="#addCard">تخطَّ إلى نموذج الإضافة</a>
+<a class="skip" href="#addCard">تخطَّ إلى نموذج التحويل</a>
 
-<header class="topbar">
+<header class="site-header">
   <div class="brand">
     <div class="logo" aria-hidden="true">♪</div>
     <div class="brand-text">
       <h1>ismp3</h1>
-      <p>أي رابط أو ملف ← MP3 بأقل حجم</p>
+      <p>محوّل MP3 خفيف</p>
     </div>
   </div>
-  <div class="topbar-actions">
+  <div class="header-actions">
     <span class="pill" id="healthPill" title="حالة الخادم">
       <span class="dot" id="healthDot"></span>
       <span id="healthText">جارٍ الاتصال…</span>
     </span>
-    <button class="icon-btn" id="themeBtn" title="تبديل السمة" aria-label="تبديل السمة">🌙</button>
-    <button class="icon-btn" id="settingsBtn" title="الإعدادات" aria-label="الإعدادات">⚙️</button>
+    <button type="button" class="icon-btn" id="themeBtn" title="تبديل السمة" aria-label="تبديل السمة">🌙</button>
+    <button type="button" class="icon-btn" id="settingsBtn" title="الإعدادات" aria-label="الإعدادات">⚙️</button>
   </div>
 </header>
 
-<main class="wrap">
+<main class="page">
 
-  <section class="stats" aria-label="إحصاءات">
-    <article class="stat"><span class="stat-icon">📚</span><div><b id="statTotal">0</b><small>إجمالي المهام</small></div></article>
-    <article class="stat"><span class="stat-icon">✅</span><div><b id="statDone">0</b><small>مكتملة</small></div></article>
-    <article class="stat"><span class="stat-icon">⏳</span><div><b id="statActive">0</b><small>نشطة</small></div></article>
-    <article class="stat"><span class="stat-icon">🎵</span><div><b id="statSize">0</b><small>حجم النتائج</small></div></article>
-    <article class="stat"><span class="stat-icon">💾</span><div><b id="statFree">—</b><small>مساحة حرة</small></div></article>
-    <article class="stat"><span class="stat-icon">🧠</span><div><b id="statSeen">0</b><small>في السجل</small></div></article>
+  <section class="hero">
+    <span class="hero-badge">MP3 · أقل حجم ممكن</span>
+    <h2>حوّل أي رابط إلى MP3</h2>
+    <p>الصق روابط يوتيوب أو ساوندكلاود أو أي وسائط، أو ارفع ملفاتك. التحويل سريع، والملفات صغيرة.</p>
+    <div class="quick-stats">
+      <span>💾 مساحة حرة: <b id="statFree">—</b></span>
+      <span>✅ مكتملة: <b id="statDone">0</b></span>
+      <span>⏳ نشطة: <b id="statActive">0</b></span>
+      <span>🎵 الحجم: <b id="statSize">0 B</b></span>
+    </div>
   </section>
 
-  <section class="card add-card" id="addCard">
-    <div class="card-head">
-      <div>
-        <h2>إضافة جديدة</h2>
-        <p class="muted small">الصق رابطاً أو أكثر، أو ارفع ملفات، أو اختر من مساحة الهاتف.</p>
-      </div>
-      <div class="tabs" role="tablist" aria-label="طريقة الإضافة">
-        <button class="tab active" data-tab="links" role="tab">🔗 روابط</button>
-        <button class="tab" data-tab="files" role="tab">⬆️ رفع</button>
-        <button class="tab" data-tab="server" role="tab">📁 من الجهاز</button>
-      </div>
+  <section class="card convert-card" id="addCard">
+    <div class="input-wrap">
+      <span class="input-icon" aria-hidden="true">🔗</span>
+      <textarea id="sources" rows="3" spellcheck="false"
+        placeholder="https://www.youtube.com/watch?v=…&#10;https://soundcloud.com/…&#10;أو رابط مباشر لملف صوت/فيديو"></textarea>
     </div>
 
-    <div class="tab-panel" data-panel="links">
-      <label class="field">
-        <span>الروابط أو المسارات <small>سطر واحد لكل عنصر</small></span>
-        <textarea id="sources" rows="4" spellcheck="false"
-          placeholder="https://www.youtube.com/watch?v=…&#10;https://soundcloud.com/…&#10;https://archive.org/details/…&#10;/sdcard/Music/ألبوم"></textarea>
-      </label>
+    <div class="input-tools">
+      <button type="button" class="tool-btn" id="pickFilesBtn">⬆️ رفع ملفات</button>
+      <button type="button" class="tool-btn" id="browseBtn">📁 من الجهاز</button>
+      <button type="button" class="tool-btn" id="previewBtn">👁 معاينة القائمة</button>
+      <button type="button" class="tool-btn" id="cookiesQuick">🍪 الكوكيز</button>
+      <input type="file" id="fileInput" multiple hidden>
     </div>
-
-    <div class="tab-panel hidden" data-panel="files">
-      <div class="dropzone" id="dropzone">
-        <div class="drop-icon" aria-hidden="true">🎧</div>
-        <p>اسحب ملفات صوت/فيديو أو أرشيف ZIP هنا</p>
-        <p class="muted small">أو <button type="button" class="link" id="pickFilesBtn">اختر من جهازك</button> — يُرفع إلى الخادم ثم يُضاف للمهمة.</p>
-        <input type="file" id="fileInput" multiple hidden>
-        <div class="upload-status small" id="uploadStatus"></div>
-      </div>
-    </div>
-
-    <div class="tab-panel hidden" data-panel="server">
-      <div class="server-pick">
-        <button type="button" class="btn" id="browseBtn">📂 تصفّح مجلدات الخادم</button>
-        <p class="muted small">اختر ملفاً أو مجلداً من مساحة الهاتف (Termux) أو الخادم (Replit).</p>
-      </div>
-    </div>
+    <div class="upload-status small" id="uploadStatus"></div>
+    <div id="previewPanel" class="preview hidden" aria-live="polite"></div>
 
     <details class="advanced" id="advanced">
-      <summary>خيارات متقدمة <span class="muted small">— الجودة، القائمة، الغلاف…</span></summary>
+      <summary>
+        <span>⚙️ خيارات متقدمة</span>
+        <small class="muted">البتريت، التردد، القنوات، اللغة…</small>
+      </summary>
       <div class="grid">
         <label class="field">
           <span>البتريت</span>
@@ -113,7 +98,7 @@
         <label class="field">
           <span>نوع البتريت</span>
           <select id="mode">
-            <option value="cbr" selected>CBR — ثابت (موصى به)</option>
+            <option value="cbr" selected>CBR — ثابت</option>
             <option value="abr">ABR — متوسط</option>
             <option value="vbr">VBR — متغيّر</option>
           </select>
@@ -154,11 +139,6 @@
         </label>
 
         <label class="field">
-          <span>اختيار من القائمة</span>
-          <input id="pick" type="text" placeholder="مثال: 1,3,5-9 — فارغ = الكل" inputmode="numeric">
-        </label>
-
-        <label class="field">
           <span>السرعة</span>
           <select id="speed">
             <option value="0.75">0.75×</option>
@@ -181,46 +161,85 @@
             <option value="direct">direct</option>
           </select>
         </label>
+
+        <label class="field">
+          <span>لغة الصوت</span>
+          <select id="audioLang">
+            <option value="original" selected>الأصلية</option>
+            <option value="ar">العربية</option>
+            <option value="en">الإنجليزية</option>
+            <option value="fr">الفرنسية</option>
+            <option value="es">الإسبانية</option>
+            <option value="de">الألمانية</option>
+            <option value="tr">التركية</option>
+            <option value="hi">الهندية</option>
+            <option value="ur">الأردية</option>
+            <option value="id">الإندونيسية</option>
+            <option value="ru">الروسية</option>
+            <option value="pt">البرتغالية</option>
+            <option value="ja">اليابانية</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>اختيار من القائمة</span>
+          <input id="pick" type="text" placeholder="مثال: 1,3,5-9 — فارغ = الكل" inputmode="numeric">
+        </label>
       </div>
 
       <div class="checks">
         <label class="check"><input type="checkbox" id="playlist" checked> اسمح بقوائم التشغيل</label>
-        <label class="check"><input type="checkbox" id="cover"> تضمين غلاف مصغّر</label>
+        <label class="check"><input type="checkbox" id="cover"> تضمين غلاف</label>
         <label class="check"><input type="checkbox" id="bundle"> اجمع النتائج في ZIP</label>
-        <label class="check"><input type="checkbox" id="force"> تجاهل سجل التنزيل السابق</label>
+        <label class="check"><input type="checkbox" id="force"> تجاهل سجل التنزيل</label>
       </div>
     </details>
 
-    <div class="add-actions">
+    <div class="convert-row">
       <div class="presets" role="group" aria-label="إعدادات جاهزة">
         <button type="button" class="chip preset" data-preset="tiny" title="16k · 16kHz · مونو">أصغر</button>
         <button type="button" class="chip preset active" data-preset="voice" title="24k · 24kHz · مونو">صوت</button>
         <button type="button" class="chip preset" data-preset="music" title="64k · 44.1kHz · ستيريو">موسيقى</button>
         <button type="button" class="chip preset" data-preset="hq" title="128k · 44.1kHz · ستيريو">جودة عالية</button>
       </div>
-      <button type="button" class="btn primary big" id="addBtn">🎧 حوّل الآن</button>
+      <button type="button" class="btn primary big" id="addBtn">🎧 تحويل إلى MP3</button>
     </div>
-    <p class="muted small" id="addHint">24 kbps · مونو · 24 kHz — حوالي 10.8 MB لكل ساعة.</p>
+    <p class="muted small hint" id="addHint">24 kbps · مونو · 24 kHz — حوالي 10.8 MB لكل ساعة.</p>
   </section>
 
-  <section class="card">
-    <div class="card-head">
-      <div>
-        <h2>المهام</h2>
-        <p class="muted small">تحديث فوري عبر SSE، مع إمكانية الإلغاء وإعادة المحاولة والتنزيل.</p>
-      </div>
-      <div class="filters" role="group" aria-label="تصفية المهام">
-        <button class="chip active" data-filter="">الكل</button>
-        <button class="chip" data-filter="active">نشطة</button>
-        <button class="chip" data-filter="done">تم</button>
-        <button class="chip" data-filter="error">أخطاء</button>
-      </div>
+  <section class="card" id="activeSection">
+    <div class="section-head">
+      <h2>⏳ قيد المعالجة <span class="count" id="activeCount">0</span></h2>
+      <span class="muted small" id="activeSpeed"></span>
+    </div>
+    <div id="activeJobs" class="jobs"></div>
+    <p class="empty hidden" id="activeEmpty">لا توجد مهام نشطة الآن.</p>
+  </section>
+
+  <section class="card" id="historySection">
+    <div class="section-head">
+      <h2>🕘 السجل <span class="count" id="historyCount">0</span></h2>
+      <button type="button" class="btn ghost danger small-btn" id="clearBtn">🧹 حذف المنتهية</button>
     </div>
 
     <div class="toolbar">
       <input id="search" class="search" type="search" placeholder="🔎 ابحث بالعنوان أو الرابط…">
-      <button class="btn ghost" id="refreshBtn">🔄 تحديث</button>
-      <button class="btn ghost danger" id="clearBtn">🧹 حذف المنتهية</button>
+      <div class="filters" role="group" aria-label="تصفية المهام">
+        <button type="button" class="chip active" data-filter="">الكل</button>
+        <button type="button" class="chip" data-filter="done">تم</button>
+        <button type="button" class="chip" data-filter="error">أخطاء</button>
+        <button type="button" class="chip" data-filter="cancelled">ملغاة</button>
+      </div>
+    </div>
+
+    <div id="bulkBar" class="bulk-bar hidden">
+      <label class="check"><input type="checkbox" id="selectAll"> تحديد الكل</label>
+      <span class="selected-count" id="selectedCount">0 محدد</span>
+      <div class="bulk-actions">
+        <button type="button" class="btn small-btn" id="bulkZip">🗜 ZIP</button>
+        <button type="button" class="btn ghost small-btn" id="bulkIa">🏛 Archive</button>
+        <button type="button" class="btn ghost danger small-btn" id="bulkDelete">🗑 حذف</button>
+      </div>
     </div>
 
     <div id="jobs" class="jobs" aria-live="polite"></div>
@@ -228,19 +247,17 @@
   </section>
 
   <section class="card">
-    <div class="card-head">
-      <div>
-        <h2>المكتبة</h2>
-        <p class="muted small">ملفات MP3 في مجلد المخرجات <span id="libraryDir" class="mono"></span></p>
-      </div>
-      <button class="btn ghost" id="libraryRefresh">🔄 تحديث</button>
+    <div class="section-head">
+      <h2>📚 المكتبة</h2>
+      <button type="button" class="btn ghost small-btn" id="libraryRefresh">🔄 تحديث</button>
     </div>
+    <p class="muted small dir-line">ملفات MP3 في مجلد المخرجات <span id="libraryDir" class="mono"></span></p>
     <div id="library" class="filelist"></div>
     <p class="empty hidden" id="libraryEmpty">لا توجد ملفات MP3 في مجلد المخرجات بعد.</p>
   </section>
 
   <footer class="footer">
-    <span>ismp3 <span id="versionText"></span> — صُنع للاستخدام الشخصي.</span>
+    <span>ismp3 <span id="versionText"></span> — للاستخدام الشخصي.</span>
     <span class="muted">yt-dlp + ffmpeg · واجهة عربية · Termux / Replit</span>
   </footer>
 </main>
@@ -270,8 +287,8 @@
             <option value="32">32</option><option value="40">40</option><option value="48">48</option>
             <option value="56">56</option><option value="64">64</option><option value="80">80</option>
             <option value="96">96</option><option value="112">112</option><option value="128">128</option>
-            <option value="160">160</option><option value="192">192</option>
-            <option value="224">224</option><option value="256">256</option><option value="320">320</option>
+            <option value="160">160</option><option value="192">192</option><option value="224">224</option>
+            <option value="256">256</option><option value="320">320</option>
           </select>
         </label>
         <label class="field">
@@ -313,7 +330,7 @@
 
     <section class="settings-section hidden" id="updateSection">
       <h3>🔄 تحديث التطبيق</h3>
-      <p class="muted small">على Replit: يجلب آخر نسخة من GitHub دون فتح Shell. بعد التحديث أوقف الـ Repl ثم اضغط Run.</p>
+      <p class="muted small">يجلب آخر نسخة من GitHub. على Replit يعيد التطبيق تشغيل نفسه تلقائياً بعد التحديث.</p>
       <div class="row between">
         <span class="small" id="updateStatus">—</span>
         <button type="button" class="btn" id="updateApp">⬇️ تحديث الآن</button>

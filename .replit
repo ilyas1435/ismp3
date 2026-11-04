@@ -1,5 +1,5 @@
 entrypoint = "README.md"
-run = "bash scripts/run-replit.sh"
+run = "bash scripts/run-loop.sh"
 modules = ["python-3.11"]
 hidden = [".config", "venv", ".venv", "__pycache__", "*.pyc", "data"]
 
@@ -14,6 +14,7 @@ PYTHONPATH = "src"
 ISMP3_CONFIG = "data/config.toml"
 PYTHONUNBUFFERED = "1"
 PIP_DISABLE_PIP_VERSION_CHECK = "1"
+ISMP3_AUTO_RESTART = "1"
 
 # Replit routes external port 80 to this internal port.
 # The server MUST listen on the same localPort (scripts/run-replit.sh does).

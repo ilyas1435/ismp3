@@ -191,7 +191,10 @@ def build_args(
         cmd += ["-filter:a", chain]
     cmd += ["-ar", str(rate), "-ac", str(1 if settings.channels == 1 else 2)]
 
-    cmd += ["-c:a", "libmp3lame", "-compression_level", "0"]
+    # libmp3lame's -compression_level is an algorithmic quality/speed trade-off
+    # (0 = slowest, 9 = fastest) and does not change the output size at CBR.
+    # Level 0 made a 10-minute file take ~47 s on a phone; level 5 takes ~9 s.
+    cmd += ["-c:a", "libmp3lame", "-compression_level", "5", "-threads", "0"]
     if settings.mode == "vbr":
         cmd += ["-q:a", str(vbr_quality(settings.bitrate))]
     elif settings.mode == "abr":
