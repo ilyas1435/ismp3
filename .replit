@@ -3,6 +3,12 @@ run = "bash scripts/run-replit.sh"
 modules = ["python-3.11"]
 hidden = [".config", "venv", ".venv", "__pycache__", "*.pyc", "data"]
 
+# Pin one Nix channel so ffmpeg/ffprobe and their libraries are consistent.
+# Without this, Replit can mix packages from different channels and ffprobe
+# fails with errors such as: version `GLIBC_2.38' not found.
+[nix]
+channel = "stable-24_05"
+
 [env]
 PYTHONPATH = "src"
 ISMP3_CONFIG = "data/config.toml"

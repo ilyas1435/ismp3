@@ -412,12 +412,14 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     add("بيئة", True, "Termux" if os.environ.get("TERMUX_VERSION") else ("Replit" if os.environ.get("REPL_ID") else "Linux/أخرى"))
 
     ffmpeg = probe.ffmpeg_version()
-    add("ffmpeg", bool(ffmpeg), ffmpeg or "غير مثبّت — pkg install ffmpeg", True)
-    try:
-        probe.ffprobe_path()
-        add("ffprobe", True)
-    except Exception as exc:
-        add("ffprobe", False, str(exc), True)
+    add(
+        "ffmpeg",
+        bool(ffmpeg),
+        ffmpeg or probe.tool_issue("ffmpeg") or "غير مثبّت — pkg install ffmpeg",
+        True,
+    )
+    ffprobe_issue = probe.tool_issue("ffprobe")
+    add("ffprobe", not ffprobe_issue, ffprobe_issue, True)
     add("libmp3lame", probe.has_encoder("libmp3lame"), "مشفّر MP3", True)
 
     try:

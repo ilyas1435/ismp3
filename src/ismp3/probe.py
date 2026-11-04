@@ -72,6 +72,32 @@ def _run(cmd: list[str], timeout: int = 60) -> subprocess.CompletedProcess[str]:
     )
 
 
+def _loader_hint(detail: str) -> str:
+    """رسالة مفهومة لتعارض مكتبات Nix على Replit بدل خطأ GLIBC الغامض."""
+    if "GLIBC_" in detail or "libc.so" in detail or "libglib" in detail:
+        return (
+            "تعارض مكتبات Nix/GLIBC في بيئة Replit. تأكد أن .replit يحتوي "
+            '[nix] channel = "stable-24_05" ثم أعد تحميل البيئة: '
+            "اكتب exit في Shell وافتحه من جديد، أو Stop ثم Run."
+        )
+    return ""
+
+
+def tool_issue(name: str) -> str:
+    """يعيد رسالة المشكلة إذا كان ffmpeg/ffprobe لا يعمل، أو نصاً فارغاً."""
+    path = shutil.which(name)
+    if not path:
+        return f"{name} غير مثبّت (يأتي مع ffmpeg)."
+    try:
+        result = _run([path, "-version"], timeout=15)
+    except (OSError, subprocess.SubprocessError) as exc:
+        return f"{name} لا يعمل: {exc}"
+    if result.returncode == 0:
+        return ""
+    detail = (result.stderr or result.stdout or "").strip()
+    return _loader_hint(detail) or (detail.splitlines() or [f"{name} لا يعمل"])[-1]
+
+
 def probe(path: str | Path) -> MediaInfo:
     src = Path(path)
     if not src.is_file():
@@ -87,7 +113,11 @@ def probe(path: str | Path) -> MediaInfo:
         ]
     )
     if result.returncode != 0:
-        detail = (result.stderr or "").strip().splitlines()
+        raw = (result.stderr or "").strip()
+        hint = _loader_hint(raw)
+        if hint:
+            raise ValueError(f"تعذّر قراءة الملف: {hint}")
+        detail = raw.splitlines()
         raise ValueError(f"تعذّر قراءة الملف: {detail[-1] if detail else 'صيغة غير معروفة'}")
 
     data = json.loads(result.stdout or "{}")

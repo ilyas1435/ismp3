@@ -185,6 +185,22 @@ nohup ismp3 serve --no-browser > ~/.ismp3.log 2>&1 &
 >
 > YouTube قد يطلب تسجيل دخول من عناوين Replit. الحل العملي: أضف `cookies.txt` من متصفحك (انظر [كوكيز YouTube](#كوكيز-youtube)). لا يعيد ismp3 بناء Piped/Invidious — هذا مقصود.
 
+### خطأ ffprobe: `GLIBC_2.38 not found`
+
+يحدث عندما يخلط Replit بين حزم Nix من قنوات مختلفة (ffmpeg قديم مع مكتبات جديدة). تأكد أن `.replit` يحتوي:
+
+```toml
+[nix]
+channel = "stable-24_05"
+```
+
+ثم أعد تحميل بيئة Nix:
+
+- اكتب `exit` في Shell وافتح Shell جديداً، أو
+- أوقف الـ Repl بـ **Stop** ثم اضغط **Run**.
+
+إذا استمر الخطأ، احذف `ffmpeg` من **Tools → System Dependencies** ثم أضفه مرة أخرى بعد ضبط القناة. `ismp3 doctor` سيعرض الآن سبب المشكلة بالعربية بدل خطأ GLIBC فقط.
+
 ---
 
 ## الواجهة العربية

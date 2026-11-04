@@ -23,6 +23,24 @@ fi
 echo "▶ Python: $("$PYTHON" --version 2>&1)"
 echo "▶ المجلد: $ROOT"
 
+check_media_tool() {
+  name="$1"
+  if ! command -v "$name" >/dev/null 2>&1; then
+    echo "⚠️ $name غير مثبّت. تأكد من وجوده في replit.nix."
+    return
+  fi
+  if output="$("$name" -version 2>&1)"; then
+    echo "▶ $name: $(printf '%s\n' "$output" | sed -n '1p')"
+  else
+    echo "⚠️ $name موجود لكنه لا يعمل بسبب تعارض مكتبات Nix/GLIBC:"
+    printf '%s\n' "$output" | sed -n '1,3p' | sed 's/^/   /'
+    echo "   الحل: ثبّت [nix] channel = \"stable-24_05\" في .replit ثم أعد تحميل البيئة."
+    echo "   من Shell: اكتب exit وافتح Shell جديداً — أو استخدم Stop ثم Run."
+  fi
+}
+check_media_tool ffmpeg
+check_media_tool ffprobe
+
 if ! "$PYTHON" -c "import yt_dlp" >/dev/null 2>&1; then
   echo "▶ تثبيت اعتماديات Python (مرة واحدة فقط)…"
   "$PYTHON" -m pip install -r requirements.txt
